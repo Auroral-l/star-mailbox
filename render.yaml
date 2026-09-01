@@ -10,9 +10,9 @@ services:
     startCommand: node server.js
     healthCheckPath: /
     envVars:
-      # 数据自动保存到这个 GitHub 仓库，永久保留
+      # 数据自动保存到这个（私有）GitHub 仓库，永久保留
       - key: GITHUB_REPO
-        value: Auroral-l/star-mailbox
+        value: Auroral-l/star-mailbox-data
       # 部署时会在网页上让你填这个令牌的值（不会保存在仓库里）
       - key: GITHUB_TOKEN
         sync: false
