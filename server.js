@@ -306,6 +306,15 @@ async function init() {
     letters = [];
     idSeq = 1;
   }
+  // 安全提醒：如果是在云端运行，但没设置 GITHUB_REPO / GITHUB_TOKEN，
+  // 数据会存在服务器临时磁盘上，重启后可能丢失
+  if (!isCloud && (process.env.RENDER || process.env.VERCEL)) {
+    console.log('');
+    console.log('⚠️ 警告：当前是云端部署，但没有设置 GITHUB_REPO 和 GITHUB_TOKEN！');
+    console.log('   信的数据会保存在服务器临时磁盘上，重启后可能丢失！');
+    console.log('   请到部署平台的环境变量里设置这两个值。');
+    console.log('');
+  }
   listen(parseInt(process.env.PORT || '3000', 10));
 }
 
