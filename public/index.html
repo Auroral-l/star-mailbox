@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>星空信箱 · 藏在星星里的爱</title>
+<style>
+  :root {
+    --pink: #ff8fab;
+    --pink-deep: #ff5d8f;
+    --gold: #ffd166;
+    --ink: #3a2a5a;
+    --paper: #fff8f0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(1200px 800px at 85% -10%, rgba(255, 141, 171, .35), transparent 60%),
+      radial-gradient(1000px 700px at -10% 110%, rgba(120, 90, 220, .45), transparent 60%),
+      linear-gradient(160deg, #120b2e 0%, #231345 55%, #3b1f5e 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ---------- 飘浮的背景小爱心与星星 ---------- */
+  #sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .floater {
+    position: absolute;
+    bottom: -60px;
+    font-size: 22px;
+    opacity: .75;
+    animation: rise linear infinite;
+    will-change: transform;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    8%   { opacity: .8; }
+    92%  { opacity: .8; }
+    100% { transform: translateY(-110vh) rotate(340deg); opacity: 0; }
+  }
+
+  /* ---------- 通用 ---------- */
+  .wrap { position: relative; z-index: 1; max-width: 640px; margin: 0 auto; padding: 18px 16px 40px; min-height: 100vh; display: none; flex-direction: column; }
+  .view { display: none; animation: fade .45s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 0 14px; }
+  .backbtn {
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; border-radius: 999px; padding: 8px 18px; font-size: 15px;
+    cursor: pointer; backdrop-filter: blur(8px); transition: .2s;
+  }
+  .backbtn:active { transform: scale(.95); background: rgba(255,255,255,.28); }
+  .homebtn {
+    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 15px;
+    cursor: pointer; backdrop-filter: blur(8px); transition: .2s;
+  }
+  .homebtn:active { transform: scale(.95); }
+
+  /* ---------- 首页 ---------- */
+  #view-home { text-align: center; padding-top: 6vh; flex: 1; }
+  .brand { font-size: 44px; letter-spacing: 2px; margin-bottom: 6px; text-shadow: 0 4px 24px rgba(255, 141, 171, .5); }
+  .brand .small { font-size: 15px; display: block; margin-top: 8px; font-weight: normal; letter-spacing: 4px; opacity: .9; }
+  .subtitle { color: rgba(255,255,255,.78); font-size: 16px; margin: 14px auto 34px; max-width: 320px; line-height: 1.7; }
+
+  .doors { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+  .door {
+    width: 240px; padding: 34px 16px 26px; border-radius: 26px; cursor: pointer;
+    background: linear-gradient(165deg, rgba(255,255,255,.16), rgba(255,255,255,.05));
+    border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25);
+    transition: transform .25s ease, box-shadow .25s ease;
+    text-align: center;
+  }
+  .door:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 26px 54px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.3); }
+  .door:active { transform: scale(.96); }
+  .door .icon { font-size: 78px; line-height: 1; display: block; margin-bottom: 14px; }
+  .door .name { font-size: 21px; font-weight: 600; margin-bottom: 8px; }
+  .door .desc { font-size: 13.5px; color: rgba(255,255,255,.75); line-height: 1.6; }
+  .door.heart .icon { filter: drop-shadow(0 6px 18px rgba(255, 93, 143, .6)); animation: beat 1.6s ease-in-out infinite; }
+  .door.star .icon { filter: drop-shadow(0 6px 18px rgba(255, 209, 102, .6)); animation: twinkle 2.4s ease-in-out infinite; }
+  @keyframes beat { 0%,100% { transform: scale(1);} 12% { transform: scale(1.12);} 24% { transform: scale(1);} 36% { transform: scale(1.1);} 48% { transform: scale(1);} }
+  @keyframes twinkle { 0%,100% { transform: scale(1) rotate(-4deg); opacity:1;} 50% { transform: scale(1.14) rotate(5deg); opacity:.85;} }
+
+  .homefoot { margin-top: auto; padding-top: 30px; font-size: 12px; color: rgba(255,255,255,.5); line-height: 1.9; }
+  .homefoot b { color: rgba(255,255,255,.8); font-weight: 500; }
+
+  /* ---------- 写信页 ---------- */
+  .page-title { font-size: 24px; text-align: center; margin: 6px 0 4px; letter-spacing: 1px; }
+  .page-title small { display:block; font-size: 13px; font-weight: normal; color: rgba(255,255,255,.65); margin-top: 6px; }
+
+  .form {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 22px; padding: 22px 18px; backdrop-filter: blur(12px);
+    margin-top: 16px;
+  }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: rgba(255,255,255,.75); margin-bottom: 7px; letter-spacing: 1px; }
+  .field input, .field textarea {
+    width: 100%; background: rgba(255,255,255,.95); border: none; border-radius: 12px;
+    padding: 13px 14px; font-size: 16px; color: var(--ink); font-family: inherit;
+    outline: none; box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+  }
+  .field textarea { min-height: 160px; resize: vertical; line-height: 1.7; }
+  .field input:focus, .field textarea:focus { box-shadow: 0 0 0 3px rgba(255, 141, 171, .55); }
+
+  .btn-send {
+    display: block; width: 100%; padding: 15px; border: none; border-radius: 999px;
+    font-size: 17px; font-weight: 600; letter-spacing: 4px; color: #fff; cursor: pointer;
+    background: linear-gradient(135deg, #ff5d8f, #ff8fab);
+    box-shadow: 0 12px 28px rgba(255, 93, 143, .45);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .btn-send:active { transform: scale(.97); }
+  .btn-send:disabled { opacity: .6; cursor: wait; }
+
+  .sent-note { text-align:center; font-size: 13px; color: rgba(255,255,255,.6); margin-top: 16px; }
+  .sent-note a { color: var(--gold); text-decoration: none; font-weight: 600; }
+
+  /* 最近的信 */
+  .recent { margin-top: 24px; }
+  .recent h3 { font-size: 15px; color: rgba(255,255,255,.8); margin-bottom: 10px; letter-spacing: 1px; }
+  .recent-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 14px; padding: 12px 14px; margin-bottom: 9px; cursor: pointer;
+    transition: .2s;
+  }
+  .recent-item:active { transform: scale(.98); background: rgba(255,255,255,.13); }
+  .recent-item .t { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-item .m { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 3px; }
+  .recent-item .arrow { color: var(--gold); font-size: 18px; flex-shrink: 0; }
+  .empty-tip { text-align:center; color: rgba(255,255,255,.5); font-size: 14px; padding: 30px 0; line-height: 2; }
+
+  /* ---------- 读信页 ---------- */
+  .letter-card {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 18px; padding: 16px 18px; margin-bottom: 12px; cursor: pointer;
+    backdrop-filter: blur(10px); transition: .2s;
+  }
+  .letter-card:active { transform: scale(.98); background: rgba(255,255,255,.14); }
+  .letter-card .row1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .letter-card .t { font-size: 17px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .letter-card .date { font-size: 12px; color: rgba(255,255,255,.5); flex-shrink: 0; }
+  .letter-card .row2 { margin-top: 8px; font-size: 13px; color: rgba(255,255,255,.68); }
+  .letter-card .row2 .tag { color: var(--pink); }
+  .letter-card .row3 { margin-top: 10px; font-size: 12.5px; color: var(--gold); }
+
+  /* ---------- 信详情 ---------- */
+  .paper {
+    background: linear-gradient(180deg, #fffdf7, #fff6ea); color: var(--ink);
+    border-radius: 20px; padding: 26px 22px; margin-top: 14px;
+    box-shadow: 0 20px 44px rgba(0,0,0,.4); position: relative; overflow: hidden;
+  }
+  .paper::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px;
+    background: linear-gradient(90deg, var(--pink), var(--gold), var(--pink));
+  }
+  .paper .to { font-size: 16px; font-weight: 600; }
+  .paper .body { margin-top: 16px; font-size: 16px; line-height: 2; white-space: pre-wrap; word-break: break-word; }
+  .paper .sig { margin-top: 20px; text-align: right; font-size: 15px; }
+  .paper .time { margin-top: 6px; text-align: right; font-size: 12px; color: #a08a70; }
+
+  .reply-sec { margin-top: 20px; }
+  .reply-sec h3 { font-size: 15px; margin-bottom: 12px; color: rgba(255,255,255,.85); letter-spacing: 1px; }
+  .bubble { margin-bottom: 10px; display: flex; }
+  .bubble .av { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; margin-right: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    background: linear-gradient(135deg, rgba(255,209,102,.85), rgba(255,141,171,.85)); }
+  .bubble .box { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 14px 14px 14px 4px; padding: 10px 13px; max-width: 82%; }
+  .bubble .box .nm { font-size: 12.5px; color: var(--gold); margin-bottom: 4px; }
+  .bubble .box .tx { font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+  .bubble .box .tm { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 5px; }
+
+  .reply-form { margin-top: 18px; }
+  .reply-form label { display:block; font-size: 13px; color: rgba(255,255,255,.75); margin-bottom: 7px; letter-spacing: 1px; }
+  .reply-form input, .reply-form textarea {
+    width: 100%; background: rgba(255,255,255,.95); border: none; border-radius: 12px;
+    padding: 12px 14px; font-size: 15px; color: var(--ink); font-family: inherit;
+    outline: none; box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+  }
+  .reply-form textarea { min-height: 90px; resize: vertical; line-height: 1.7; margin-top: 10px; }
+  .btn-reply {
+    margin-top: 12px; width: 100%; padding: 13px; border: none; border-radius: 999px;
+    font-size: 16px; font-weight: 600; letter-spacing: 3px; color: #fff; cursor: pointer;
+    background: linear-gradient(135deg, #ffd166, #ff8fab);
+    box-shadow: 0 10px 24px rgba(255, 209, 102, .35);
+  }
+  .btn-reply:active { transform: scale(.97); }
+
+  /* ---------- 寄出成功动画 ---------- */
+  .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(18,11,46,.86);
+    display: none; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+  .overlay.show { display: flex; animation: fade .3s ease; }
+  .success-box { text-align: center; animation: pop .5s cubic-bezier(.2,1.4,.4,1); }
+  .success-box .big { font-size: 90px; display: block; animation: beat 1.4s ease-in-out infinite; }
+  .success-box .t1 { font-size: 24px; margin-top: 18px; letter-spacing: 2px; }
+  .success-box .t2 { color: rgba(255,255,255,.7); font-size: 14px; margin-top: 10px; line-height: 1.8; }
+  .success-box .ok {
+    margin: 22px auto 0; padding: 13px 46px; border: none; border-radius: 999px; font-size: 16px;
+    letter-spacing: 3px; color: #fff; cursor: pointer;
+    background: linear-gradient(135deg, #ff5d8f, #ff8fab); box-shadow: 0 12px 28px rgba(255,93,143,.45);
+  }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ---------- 提示气泡 ---------- */
+  .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%);
+    background: rgba(0,0,0,.8); color: #fff; padding: 12px 22px; border-radius: 999px;
+    font-size: 14px; z-index: 60; opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+
+  @media (max-width: 420px) {
+    .doors { flex-direction: column; align-items: center; }
+    .door { width: 100%; max-width: 300px; padding: 26px 16px 22px; }
+    .brand { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- 背景飘浮 -->
+<div id="sky"></div>
+
+<!-- ============ 首页 ============ -->
+<div class="wrap" id="view-home" style="display:flex">
+  <div class="view active" style="display:block; text-align:center; padding-top:6vh; flex:1">
+    <h1 class="brand">❤️ 星空信箱
+      <span class="small">STAR · MAILBOX</span>
+    </h1>
+    <p class="subtitle">把心里的话写成一封信，寄给星星。<br>那些没说出口的，都在这里。</p>
+
+    <div class="doors">
+      <div class="door heart" onclick="goWrite()">
+        <span class="icon">💗</span>
+        <div class="name">寄出一封信</div>
+        <div class="desc">点开爱心，写一封新的信，<br>放进我们的信箱里</div>
+      </div>
+      <div class="door star" onclick="goRead()">
+        <span class="icon">⭐</span>
+        <div class="name">读信与回信</div>
+        <div class="desc">点开星星，看看信箱里<br>收到了谁的信，还可以回复</div>
+      </div>
+    </div>
+
+    <div class="homefoot">
+      电脑地址：<b>http://localhost</b><br>
+      手机地址（连同一个WiFi）：<b id="phoneUrl">http://…</b>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 写信页 ============ -->
+<div class="wrap" id="view-write">
+  <div class="view active" style="display:block">
+    <div class="topbar">
+      <button class="backbtn" onclick="goHome()">← 返回</button>
+      <button class="homebtn" onclick="goRead()">⭐ 去看信</button>
+    </div>
+    <div class="page-title">💌 写一封信
+      <small>写下想说的话，寄给心里的人</small>
+    </div>
+
+    <div class="form">
+      <div class="field">
+        <label>收信人（给谁写的）</label>
+        <input id="in-recipient" type="text" maxlength="40" placeholder="例如：亲爱的你">
+      </div>
+      <div class="field">
+        <label>你的署名（谁写的）</label>
+        <input id="in-sender" type="text" maxlength="40" placeholder="例如：永远爱你的人">
+      </div>
+      <div class="field">
+        <label>标题</label>
+        <input id="in-title" type="text" maxlength="80" placeholder="给这封信起个名字">
+      </div>
+      <div class="field">
+        <label>信的内容</label>
+        <textarea id="in-content" maxlength="20000" placeholder="把想说的话都写下来吧……"></textarea>
+      </div>
+      <button class="btn-send" id="btn-send" onclick="sendLetter()">💗 寄出这封信</button>
+    </div>
+
+    <div class="sent-note">共收到 <b id="count-note" style="color:var(--gold)">0</b> 封信 ·
+      <a href="javascript:void(0)" onclick="goRead()">点这里去看看 ➜</a>
+    </div>
+
+    <div class="recent">
+      <h3>🕊️ 最近的信</h3>
+      <div id="recent-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 读信页 ============ -->
+<div class="wrap" id="view-read">
+  <div class="view active" style="display:block">
+    <div class="topbar">
+      <button class="backbtn" onclick="goHome()">← 返回</button>
+      <button class="homebtn" onclick="goWrite()">💗 去写信</button>
+    </div>
+    <div class="page-title">⭐ 信箱里的信
+      <small id="read-sub">静静看看，谁写了信</small>
+    </div>
+    <div id="letter-list" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ============ 信详情页 ============ -->
+<div class="wrap" id="view-letter">
+  <div class="view active" style="display:block">
+    <div class="topbar">
+      <button class="backbtn" id="letter-back" onclick="detailBack()">← 返回</button>
+      <button class="homebtn" onclick="goHome()">🏠 首页</button>
+    </div>
+    <div id="letter-detail"></div>
+  </div>
+</div>
+
+<!-- ============ 寄出成功 ============ -->
+<div class="overlay" id="success-overlay">
+  <div class="success-box">
+    <span class="big">💌</span>
+    <div class="t1">信已寄出</div>
+    <div class="t2">已经放进信箱里啦，<br>打开星星就可以看到</div>
+    <button class="ok" onclick="closeSuccess()">好</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================== 工具 ================== */
+const $ = (id) => document.getElementById(id);
+function show(id) {
+  document.querySelectorAll('.wrap').forEach(v => v.style.display = 'none');
+  $(id).style.display = 'flex';
+  if (id === 'view-home') document.querySelector('#view-home > .view').style.display = 'block';
+}
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ================== 背景飘浮 ================== */
+(function () {
+  const sky = $('sky');
+  const chars = ['💖','💕','✨','⭐','💫','🌸','🌟'];
+  for (let i = 0; i < 34; i++) {
+    const s = document.createElement('span');
+    s.className = 'floater';
+    s.textContent = chars[i % chars.length];
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.fontSize = (14 + Math.random() * 22) + 'px';
+    s.style.animationDuration = (9 + Math.random() * 14) + 's';
+    s.style.animationDelay = (-Math.random() * 20) + 's';
+    s.style.opacity = (0.35 + Math.random() * 0.45);
+    sky.appendChild(s);
+  }
+})();
+
+/* ================== 页面切换 ================== */
+function goHome() {
+  show('view-home');
+  loadInfo();
+}
+function goWrite() {
+  show('view-write');
+  loadRecent();
+}
+function goRead() {
+  show('view-read');
+  loadLetters();
+}
+let detailBackTarget = 'read';
+function detailBack() {
+  detailBackTarget === 'read' ? goRead() : goWrite();
+}
+
+/* ================== 数据加载 ================== */
+let letters = [];
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || '网络出错了');
+  return data;
+}
+
+async function loadInfo() {
+  try {
+    const info = await api('/api/info');
+    $('phoneUrl').textContent = 'http://' + info.lanIp + ':' + info.port;
+  } catch (e) { /* 忽略 */ }
+}
+
+async function loadRecent() {
+  try {
+    const data = await api('/api/letters');
+    letters = data.letters || [];
+    $('count-note').textContent = letters.length;
+    const box = $('recent-list');
+    if (!letters.length) {
+      box.innerHTML = '<div class="empty-tip">还没有信哦。<br>在上面写下第一封吧 💗</div>';
+      return;
+    }
+    box.innerHTML = letters.slice(0, 8).map(l => `
+      <div class="recent-item" onclick="openLetter(${l.id}, 'write')">
+        <div style="min-width:0">
+          <div class="t">${escapeHtml(l.title)}</div>
+          <div class="m">${escapeHtml(l.recipient)} · ${l.createdAt} · 💬 ${l.replies.length}</div>
+        </div>
+        <div class="arrow">❯</div>
+      </div>`).join('');
+  } catch (e) { toast(e.message); }
+}
+
+async function loadLetters() {
+  const box = $('letter-list');
+  $('read-sub').textContent = '静静看看，谁写了信…';
+  try {
+    const data = await api('/api/letters');
+    letters = data.letters || [];
+    $('read-sub').textContent = '一共 ' + letters.length + ' 封信，都为你留着';
+    if (!letters.length) {
+      box.innerHTML = '<div class="empty-tip">信箱还是空的……<br>点开爱心，去写第一封信吧 💗</div>';
+      return;
+    }
+    box.innerHTML = letters.map(l => `
+      <div class="letter-card" onclick="openLetter(${l.id}, 'read')">
+        <div class="row1">
+          <div class="t">${escapeHtml(l.title)}</div>
+          <div class="date">${escapeHtml(l.createdAt.slice(0, 16))}</div>
+        </div>
+        <div class="row2">
+          <span class="tag">💗 给 ${escapeHtml(l.recipient)}</span>　·
+          来自 ${escapeHtml(l.sender)}
+        </div>
+        <div class="row3">💬 ${l.replies.length} 条回复</div>
+      </div>`).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="empty-tip">加载失败：' + escapeHtml(e.message) + '<br>请稍后再试</div>';
+  }
+}
+
+/* ================== 写信 ================== */
+async function sendLetter() {
+  const title = $('in-title').value.trim();
+  const content = $('in-content').value.trim();
+  const sender = $('in-sender').value.trim() || '匿名';
+  const recipient = $('in-recipient').value.trim() || '亲爱的你';
+
+  if (!title) return toast('请先给信起个标题');
+  if (!content) return toast('请写下信的内容哦');
+
+  const btn = $('btn-send');
+  btn.disabled = true;
+  btn.textContent = '正在寄出…';
+  try {
+    await api('/api/letters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, sender, recipient })
+    });
+    $('in-title').value = '';
+    $('in-content').value = '';
+    $('success-overlay').classList.add('show');
+    loadRecent();
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💗 寄出这封信';
+  }
+}
+function closeSuccess() {
+  $('success-overlay').classList.remove('show');
+}
+
+/* ================== 信详情 ================== */
+async function openLetter(id, from) {
+  detailBackTarget = from;
+  show('view-letter');
+  const box = $('letter-detail');
+  box.innerHTML = '<div class="empty-tip">正在打开信封…</div>';
+  try {
+    const data = await api('/api/letters');
+    const l = (data.letters || []).find(x => x.id === id);
+    if (!l) { box.innerHTML = '<div class="empty-tip">这封信好像被风吹走了</div>'; return; }
+    renderLetter(l);
+  } catch (e) {
+    box.innerHTML = '<div class="empty-tip">加载失败：' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderLetter(l) {
+  const box = $('letter-detail');
+  const replies = (l.replies || []).map(r => `
+    <div class="bubble">
+      <div class="av">💬</div>
+      <div class="box">
+        <div class="nm">${escapeHtml(r.name)} · ${escapeHtml(r.createdAt)}</div>
+        <div class="tx">${escapeHtml(r.content)}</div>
+      </div>
+    </div>`).join('');
+
+  box.innerHTML = `
+    <div class="paper">
+      <div class="to">亲爱的 ${escapeHtml(l.recipient)}，</div>
+      <div class="body">${escapeHtml(l.content)}</div>
+      <div class="sig">—— ${escapeHtml(l.sender)}</div>
+      <div class="time">${escapeHtml(l.createdAt)}</div>
+    </div>
+
+    <div class="reply-sec">
+      <h3>💬 回复（${l.replies.length}）</h3>
+      ${replies || '<div class="empty-tip" style="padding:16px 0">还没有人回复这封信</div>'}
+    </div>
+
+    <div class="reply-form">
+      <label>你的称呼</label>
+      <input id="rep-name" type="text" maxlength="40" placeholder="署名，例如：陪你的人">
+      <label style="margin-top:10px">回复内容</label>
+      <textarea id="rep-content" maxlength="4000" placeholder="写下你想回复的话……"></textarea>
+      <button class="btn-reply" onclick="sendReply(${l.id})">⭐ 送出回复</button>
+    </div>`;
+}
+
+async function sendReply(id) {
+  const name = $('rep-name').value.trim() || '匿名';
+  const content = $('rep-content').value.trim();
+  if (!content) return toast('请先写下回复内容');
+  try {
+    await api('/api/letters/' + id + '/reply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, content })
+    });
+    toast('回复成功 💖');
+    renderLetter(letters.find(x => x.id === id) || { id, replies: [] });
+    // 刷新数据后再渲染
+    const data = await api('/api/letters');
+    const updated = (data.letters || []).find(x => x.id === id);
+    if (updated) renderLetter(updated);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+/* ================== 启动 ================== */
+loadInfo();
+loadRecent();
+</script>
+</body>
+</html>

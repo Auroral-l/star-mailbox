@@ -1,0 +1,12 @@
+{
+  "name": "star-mailbox",
+  "version": "1.0.0",
+  "description": "星空信箱 · 爱心写信 / 星星读信回信",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}
