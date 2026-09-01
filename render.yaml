@@ -1,0 +1,18 @@
+# Render 云部署配置（免费）
+# 部署方法：登录 render.com → New → Blueprint → 选择本仓库，即可自动创建
+services:
+  - type: web
+    name: star-mailbox
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: ""
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      # 数据自动保存到这个 GitHub 仓库，永久保留
+      - key: GITHUB_REPO
+        value: Auroral-l/star-mailbox
+      # 部署时会在网页上让你填这个令牌的值（不会保存在仓库里）
+      - key: GITHUB_TOKEN
+        sync: false
