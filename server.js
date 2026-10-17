@@ -139,10 +139,11 @@ function saveData() {
 }
 
 function nowStr() {
-  const d = new Date();
+  // 统一使用北京时间（UTC+8），不受服务器所在时区影响
+  const d = new Date(Date.now() + 8 * 60 * 60 * 1000);
   const p = (n) => String(n).padStart(2, '0');
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
-    ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate()) +
+    ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes());
 }
 
 /* ---------------- 工具函数 ---------------- */
