@@ -203,6 +203,80 @@
     cursor: pointer; padding: 2px 4px; font-family: inherit;
   }
 
+  /* ---------- 个人主页 ---------- */
+  .profile-entry {
+    margin-top: 28px; display: inline-block; padding: 12px 28px; border-radius: 999px;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; font-size: 14.5px; cursor: pointer; backdrop-filter: blur(8px);
+    transition: .2s; font-family: inherit; letter-spacing: 1px;
+  }
+  .profile-entry:active { transform: scale(.95); background: rgba(255,255,255,.2); }
+
+  .profile-card {
+    margin-top: 20px; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.2); border-radius: 22px;
+    padding: 30px 22px; text-align: center; backdrop-filter: blur(12px);
+  }
+  .avatar-xl {
+    width: 104px; height: 104px; border-radius: 50%; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px; overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,209,102,.9), rgba(255,141,171,.9));
+    box-shadow: 0 10px 28px rgba(0,0,0,.35), 0 0 0 4px rgba(255,255,255,.12);
+  }
+  .avatar-xl img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-card .pname { font-size: 22px; font-weight: 600; letter-spacing: 1px; }
+  .profile-card .pbio { margin-top: 10px; font-size: 14px; color: rgba(255,255,255,.72); line-height: 1.7; white-space: pre-wrap; }
+  .profile-card .pmeta { margin-top: 16px; font-size: 12px; color: rgba(255,255,255,.45); }
+  .profile-card .pown { display: inline-block; margin-top: 8px; padding: 3px 12px; border-radius: 999px; font-size: 12px; color: var(--gold); background: rgba(255,209,102,.12); border: 1px solid rgba(255,209,102,.35); }
+  .btn-edit {
+    margin-top: 20px; padding: 12px 34px; border: none; border-radius: 999px;
+    font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #fff; cursor: pointer;
+    background: linear-gradient(135deg, #ff5d8f, #ff8fab);
+    box-shadow: 0 10px 24px rgba(255,93,143,.4); font-family: inherit;
+  }
+  .btn-edit:active { transform: scale(.97); }
+
+  .avatar-preview {
+    width: 84px; height: 84px; border-radius: 50%; margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 42px; overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,209,102,.9), rgba(255,141,171,.9));
+  }
+  .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 4px; }
+  .avatar-picker span {
+    width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 22px; cursor: pointer;
+    background: rgba(255,255,255,.1); border: 2px solid transparent; transition: .15s;
+  }
+  .avatar-picker span.on { border-color: var(--gold); background: rgba(255,209,102,.18); }
+  .upload-btn {
+    display: inline-block; margin-top: 4px; padding: 9px 22px; border-radius: 999px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+    color: #fff; font-size: 13.5px; cursor: pointer;
+  }
+  .upload-btn:active { transform: scale(.97); }
+
+  .bubble .av.click { cursor: pointer; box-shadow: 0 0 0 2px rgba(255,209,102,.45); }
+  .bubble .av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .viewp { color: var(--gold); opacity: .8; font-size: 11.5px; text-decoration: none; margin-left: 3px; }
+  .me-chip {
+    display: flex; align-items: center; gap: 9px; margin-bottom: 12px;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px; padding: 7px 14px 7px 7px; font-size: 13.5px;
+    color: rgba(255,255,255,.85);
+  }
+  .me-chip .mav {
+    width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+    background: linear-gradient(135deg, rgba(255,209,102,.85), rgba(255,141,171,.85));
+  }
+  .me-chip .mav img { width: 100%; height: 100%; object-fit: cover; }
+  .me-chip b { color: var(--gold); }
+  .me-chip a { color: var(--pink); text-decoration: none; margin-left: auto; font-size: 12.5px; }
+  .me-tip { font-size: 12.5px; color: rgba(255,255,255,.55); line-height: 1.6; margin-bottom: 12px; }
+  .me-tip a { color: var(--gold); text-decoration: none; }
+
   .reply-form { margin-top: 18px; }
   .reply-form label { display:block; font-size: 13px; color: rgba(255,255,255,.75); margin-bottom: 7px; letter-spacing: 1px; }
   .reply-form input, .reply-form textarea {
@@ -271,6 +345,10 @@
         <div class="name">读信与回信</div>
         <div class="desc">点开星星，看看信箱里<br>收到了谁的信，还可以回复</div>
       </div>
+    </div>
+
+    <div>
+      <button class="profile-entry" onclick="goProfile()">👤 我的主页</button>
     </div>
 
     <div class="homefoot">
@@ -347,6 +425,17 @@
   </div>
 </div>
 
+<!-- ============ 个人主页 ============ -->
+<div class="wrap" id="view-profile">
+  <div class="view active" style="display:block">
+    <div class="topbar">
+      <button class="backbtn" onclick="profileBack()">← 返回</button>
+      <button class="homebtn" onclick="goHome()">🏠 首页</button>
+    </div>
+    <div id="profile-body"></div>
+  </div>
+</div>
+
 <!-- ============ 寄出成功 ============ -->
 <div class="overlay" id="success-overlay">
   <div class="success-box">
@@ -362,7 +451,9 @@
 <script>
 /* ================== 工具 ================== */
 const $ = (id) => document.getElementById(id);
+let activeView = 'view-home';
 function show(id) {
+  activeView = id;
   document.querySelectorAll('.wrap').forEach(v => v.style.display = 'none');
   $(id).style.display = 'flex';
   if (id === 'view-home') document.querySelector('#view-home > .view').style.display = 'block';
@@ -415,6 +506,11 @@ function detailBack() {
 
 /* ================== 数据加载 ================== */
 let letters = [];
+let profileMap = {};
+function rememberProfiles(data) {
+  profileMap = {};
+  for (const p of (data.profiles || [])) profileMap[p.id] = p;
+}
 
 async function api(path, options) {
   const res = await fetch(path, options);
@@ -434,6 +530,7 @@ async function loadRecent() {
   try {
     const data = await api('/api/letters');
     letters = data.letters || [];
+    rememberProfiles(data);
     $('count-note').textContent = letters.length;
     const box = $('recent-list');
     if (!letters.length) {
@@ -457,6 +554,7 @@ async function loadLetters() {
   try {
     const data = await api('/api/letters');
     letters = data.letters || [];
+    rememberProfiles(data);
     $('read-sub').textContent = '一共 ' + letters.length + ' 封信，都为你留着';
     if (!letters.length) {
       box.innerHTML = '<div class="empty-tip">信箱还是空的……<br>点开爱心，去写第一封信吧 💗</div>';
@@ -516,15 +614,18 @@ function closeSuccess() {
 /* ================== 信详情 ================== */
 let currentLetter = null;
 let replyTarget = null; // 正在回复的那条回复 { id, name }
+let lastLetterId = null; // 用于"查看主页"后返回原信
 
 async function openLetter(id, from) {
   detailBackTarget = from;
   replyTarget = null;
+  lastLetterId = id;
   show('view-letter');
   const box = $('letter-detail');
   box.innerHTML = '<div class="empty-tip">正在打开信封…</div>';
   try {
-    const data = await api('/api/letters');
+    const [data] = await Promise.all([api('/api/letters'), loadMyProfile()]);
+    rememberProfiles(data);
     const l = (data.letters || []).find(x => x.id === id);
     if (!l) { box.innerHTML = '<div class="empty-tip">这封信好像被风吹走了</div>'; return; }
     renderLetter(l);
@@ -536,17 +637,28 @@ async function openLetter(id, from) {
 function renderLetter(l) {
   currentLetter = l;
   const box = $('letter-detail');
-  const replies = (l.replies || []).map(r => `
+  const replies = (l.replies || []).map(r => {
+    const p = r.profileId ? profileMap[r.profileId] : null;
+    const av = p ? avatarHtml(p.avatar) : '💬';
+    const nm = p ? p.name : r.name;
+    const avAttrs = p
+      ? ` class="av click" onclick="openProfileFromReply(${Number(p.id)}, ${Number(l.id)})" title="查看 ${escapeHtml(p.name)} 的主页"`
+      : ' class="av"';
+    const viewLink = p
+      ? `<a href="javascript:void(0)" class="viewp" onclick="openProfileFromReply(${Number(p.id)}, ${Number(l.id)})">查看主页 ›</a>`
+      : '';
+    return `
     <div class="bubble">
-      <div class="av">💬</div>
+      <div${avAttrs}>${av}</div>
       <div class="box">
-        <div class="nm">${escapeHtml(r.name)} · ${escapeHtml(r.createdAt)}</div>
+        <div class="nm">${escapeHtml(nm)} · ${escapeHtml(r.createdAt)}${viewLink}</div>
         ${r.replyToName ? `<div class="rp-to">回复 <b>@${escapeHtml(r.replyToName)}</b></div>` : ''}
         ${r.quote ? `<div class="quote">${escapeHtml(r.quote)}</div>` : ''}
         <div class="tx">${escapeHtml(r.content)}</div>
         <span class="rp" onclick="startReplyTo(${Number(l.id)}, ${Number(r.id)})">↩ 回复 Ta</span>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   box.innerHTML = `
     <div class="paper">
@@ -566,8 +678,16 @@ function renderLetter(l) {
         <span>正在回复 <b id="rep-target-name"></b></span>
         <button type="button" onclick="cancelReplyTo()">取消</button>
       </div>
+      ${myProfile ? `
+      <div class="me-chip">
+        <span class="mav">${avatarHtml(myProfile.avatar)}</span>
+        <span>以 <b>${escapeHtml(myProfile.name)}</b> 的身份回复</span>
+        <a href="javascript:void(0)" onclick="goProfile()">编辑</a>
+      </div>` : `
+      <div class="me-tip">💡 <a href="javascript:void(0)" onclick="goProfile()">设置个人主页</a>后，你的回复会显示名字和头像</div>
       <label>你的称呼</label>
       <input id="rep-name" type="text" maxlength="40" placeholder="署名，例如：陪你的人">
+      `}
       <label style="margin-top:10px">回复内容</label>
       <textarea id="rep-content" maxlength="4000" placeholder="${replyTarget ? '回复 @' + escapeHtml(replyTarget.name) + '……' : '写下你想回复的话……'}"></textarea>
       <button class="btn-reply" onclick="sendReply(${Number(l.id)})">⭐ 送出回复</button>
@@ -600,10 +720,13 @@ function cancelReplyTo() {
 }
 
 async function sendReply(id) {
-  const name = $('rep-name').value.trim() || '匿名';
+  const nameInput = $('rep-name');
+  const name = myProfile ? myProfile.name
+    : ((nameInput ? nameInput.value.trim() : '') || '匿名');
   const content = $('rep-content').value.trim();
   if (!content) return toast('请先写下回复内容');
   const body = { name, content };
+  if (myProfile) body.profileId = myProfile.id;
   if (replyTarget) body.replyTo = replyTarget.id;
   try {
     await api('/api/letters/' + id + '/reply', {
@@ -614,8 +737,242 @@ async function sendReply(id) {
     toast(replyTarget ? '已回复 @' + replyTarget.name + ' 💖' : '回复成功 💖');
     replyTarget = null;
     const data = await api('/api/letters');
+    rememberProfiles(data);
     const updated = (data.letters || []).find(x => x.id === id);
     if (updated) renderLetter(updated);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+/* ================== 个人主页 ================== */
+const CRED_KEY = 'star-mailbox-profile';
+let myCred = null;
+try { myCred = JSON.parse(localStorage.getItem(CRED_KEY) || 'null'); } catch (e) { myCred = null; }
+let myProfile = null;
+let profileCache = null;
+let draftAvatar = '💗';
+let profileBackView = 'view-home';
+
+function saveCred(cred) {
+  myCred = cred;
+  try {
+    if (cred) localStorage.setItem(CRED_KEY, JSON.stringify(cred));
+    else localStorage.removeItem(CRED_KEY);
+  } catch (e) { /* 忽略 */ }
+}
+
+async function loadMyProfile() {
+  if (!myCred || !myCred.id) { myProfile = null; return; }
+  try {
+    const data = await api('/api/profiles/' + myCred.id);
+    myProfile = data.profile;
+  } catch (e) {
+    myProfile = null;
+    if (/不存在/.test(e.message)) saveCred(null);
+  }
+}
+
+function avatarHtml(avatar) {
+  const a = avatar || '💗';
+  if (typeof a === 'string' && a.indexOf('data:image/') === 0) {
+    return '<img src="' + a + '" alt="头像">';
+  }
+  return escapeHtml(a);
+}
+
+function goProfile(id) {
+  profileBackView = activeView;
+  show('view-profile');
+  $('profile-body').innerHTML = '<div class="empty-tip">正在打开主页…</div>';
+  if (id) loadProfilePage(id);
+  else loadProfilePage(myCred && myCred.id ? myCred.id : null);
+}
+
+function profileBack() {
+  if (profileBackView === 'view-letter' && lastLetterId != null) {
+    openLetter(lastLetterId, detailBackTarget);
+  } else if (profileBackView === 'view-read') {
+    goRead();
+  } else if (profileBackView === 'view-write') {
+    goWrite();
+  } else {
+    goHome();
+  }
+}
+
+function openProfileFromReply(profileId, letterId) {
+  lastLetterId = letterId;
+  goProfile(profileId);
+}
+
+async function loadProfilePage(id) {
+  if (!id) { renderProfileSetup(); return; }
+  await loadMyProfile();
+  try {
+    const data = await api('/api/profiles/' + id);
+    const own = !!(myCred && myCred.id === data.profile.id);
+    if (own) myProfile = data.profile;
+    renderProfileCard(data.profile, own);
+  } catch (e) {
+    if (myCred && myCred.id === id) saveCred(null);
+    $('profile-body').innerHTML =
+      '<div class="empty-tip">这个主页暂时打不开<br>' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderProfileCard(profile, own) {
+  profileCache = profile;
+  $('profile-body').innerHTML = `
+    <div class="profile-card">
+      <div class="avatar-xl">${avatarHtml(profile.avatar)}</div>
+      <div class="pname">${escapeHtml(profile.name)}</div>
+      ${profile.bio ? `<div class="pbio">${escapeHtml(profile.bio)}</div>`
+        : (own ? '<div class="pbio" style="opacity:.5">还没有写个性签名</div>' : '')}
+      ${own ? '<div class="pown">这是你的主页</div>' : ''}
+      <div class="pmeta">加入于 ${escapeHtml(profile.createdAt)}</div>
+      ${own ? '<div><button class="btn-edit" onclick="renderProfileEdit()">✏️ 修改我的资料</button></div>' : ''}
+    </div>`;
+}
+
+const AVATAR_EMOJIS = ['💗','💖','🌸','🌙','⭐','🐰','🐻','🦊','🍓','🌻','🎀','✨'];
+
+function avatarPickerHtml() {
+  return AVATAR_EMOJIS.map(e =>
+    `<span class="${e === draftAvatar ? 'on' : ''}" onclick="pickEmoji(this, '${e}')">${e}</span>`
+  ).join('');
+}
+
+function renderProfileSetup() {
+  profileCache = null;
+  draftAvatar = '💗';
+  $('profile-body').innerHTML = `
+    <div class="profile-card" style="text-align:left">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:600">👋 设置你的个人主页</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.6);margin-top:7px;line-height:1.8">
+          设置好之后，你回复时会显示名字和头像，<br>别人点你的头像就能看到你的主页
+        </div>
+        <div class="avatar-preview" id="av-preview" style="margin-top:18px">${avatarHtml(draftAvatar)}</div>
+        <label class="upload-btn">📷 上传照片
+          <input type="file" accept="image/*" style="display:none" onchange="onAvatarFile(this)">
+        </label>
+      </div>
+      <div class="field" style="margin-top:20px">
+        <label>或者选一个表情头像</label>
+        <div class="avatar-picker" id="av-picker">${avatarPickerHtml()}</div>
+      </div>
+      <div class="field">
+        <label>我的名字</label>
+        <input id="pf-name" type="text" maxlength="24" placeholder="例如：小月亮">
+      </div>
+      <div class="field">
+        <label>个性签名（选填）</label>
+        <input id="pf-bio" type="text" maxlength="60" placeholder="一句话介绍自己">
+      </div>
+      <button class="btn-edit" style="width:100%" onclick="saveProfile()">💗 创建我的主页</button>
+      <div style="text-align:center;margin-top:14px">
+        <a href="javascript:void(0)" style="color:rgba(255,255,255,.55);font-size:13px" onclick="profileBack()">先不设置，返回</a>
+      </div>
+    </div>`;
+}
+
+function renderProfileEdit() {
+  if (!profileCache) return;
+  draftAvatar = profileCache.avatar || '💗';
+  $('profile-body').innerHTML = `
+    <div class="profile-card" style="text-align:left">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:600">✏️ 修改我的资料</div>
+        <div class="avatar-preview" id="av-preview" style="margin-top:18px">${avatarHtml(draftAvatar)}</div>
+        <label class="upload-btn">📷 上传照片
+          <input type="file" accept="image/*" style="display:none" onchange="onAvatarFile(this)">
+        </label>
+      </div>
+      <div class="field" style="margin-top:20px">
+        <label>或者选一个表情头像</label>
+        <div class="avatar-picker" id="av-picker">${avatarPickerHtml()}</div>
+      </div>
+      <div class="field">
+        <label>我的名字</label>
+        <input id="pf-name" type="text" maxlength="24" value="${escapeHtml(profileCache.name)}" placeholder="别人看到的名字">
+      </div>
+      <div class="field">
+        <label>个性签名（选填）</label>
+        <input id="pf-bio" type="text" maxlength="60" value="${escapeHtml(profileCache.bio || '')}" placeholder="一句话介绍自己">
+      </div>
+      <button class="btn-edit" style="width:100%" onclick="saveProfile()">💾 保存</button>
+      <div style="text-align:center;margin-top:14px">
+        <a href="javascript:void(0)" style="color:rgba(255,255,255,.55);font-size:13px" onclick="cancelProfileEdit()">取消</a>
+      </div>
+    </div>`;
+}
+
+function pickEmoji(el, emoji) {
+  draftAvatar = emoji;
+  document.querySelectorAll('#av-picker span').forEach(s => s.classList.remove('on'));
+  el.classList.add('on');
+  $('av-preview').innerHTML = avatarHtml(draftAvatar);
+}
+
+function onAvatarFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!/^image\//.test(file.type)) return toast('请选择一张图片');
+  if (file.size > 20 * 1024 * 1024) return toast('图片太大了，换一张吧');
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 180;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      draftAvatar = canvas.toDataURL('image/jpeg', 0.86);
+      $('av-preview').innerHTML = avatarHtml(draftAvatar);
+      document.querySelectorAll('#av-picker span').forEach(s => s.classList.remove('on'));
+    };
+    img.onerror = () => toast('这张图片读不出来，换一张试试');
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelProfileEdit() {
+  if (profileCache) renderProfileCard(profileCache, !!(myCred && myCred.id === profileCache.id));
+  else renderProfileSetup();
+}
+
+async function saveProfile() {
+  const name = $('pf-name').value.trim();
+  const bio = $('pf-bio').value.trim();
+  if (!name) return toast('请先填写名字');
+  const body = { name, bio, avatar: draftAvatar };
+  const editingOwn = !!(myCred && myCred.id && (!profileCache || myCred.id === profileCache.id));
+  try {
+    let data;
+    if (editingOwn) {
+      data = await api('/api/profiles/' + myCred.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, token: myCred.token })
+      });
+      toast('资料已更新 ✨');
+    } else {
+      data = await api('/api/profiles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      saveCred({ id: data.profile.id, token: data.token });
+      toast('主页创建成功 🎉');
+    }
+    myProfile = data.profile;
+    profileCache = data.profile;
+    renderProfileCard(data.profile, true);
   } catch (e) {
     toast(e.message);
   }
@@ -624,6 +981,7 @@ async function sendReply(id) {
 /* ================== 启动 ================== */
 loadInfo();
 loadRecent();
+loadMyProfile();
 </script>
 </body>
 </html>
