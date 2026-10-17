@@ -178,6 +178,30 @@
   .bubble .box .nm { font-size: 12.5px; color: var(--gold); margin-bottom: 4px; }
   .bubble .box .tx { font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
   .bubble .box .tm { font-size: 11px; color: rgba(255,255,255,.4); margin-top: 5px; }
+  .bubble .box .rp-to { font-size: 12px; color: rgba(255,255,255,.62); margin-bottom: 5px; }
+  .bubble .box .rp-to b { color: var(--gold); font-weight: 600; }
+  .bubble .box .quote {
+    margin: 6px 0 7px; padding: 7px 10px; border-left: 3px solid rgba(255,209,102,.65);
+    background: rgba(255,255,255,.06); border-radius: 8px;
+    font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,.62);
+    word-break: break-word;
+  }
+  .bubble .box .rp {
+    display: inline-block; margin-top: 7px; font-size: 12px; color: var(--gold);
+    cursor: pointer; opacity: .8; user-select: none;
+  }
+  .bubble .box .rp:active { opacity: 1; }
+  .rep-target {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(255,209,102,.13); border: 1px solid rgba(255,209,102,.4);
+    border-radius: 12px; padding: 9px 13px; font-size: 13px; color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .rep-target b { color: #fff; }
+  .rep-target button {
+    background: none; border: none; color: rgba(255,255,255,.65); font-size: 12.5px;
+    cursor: pointer; padding: 2px 4px; font-family: inherit;
+  }
 
   .reply-form { margin-top: 18px; }
   .reply-form label { display:block; font-size: 13px; color: rgba(255,255,255,.75); margin-bottom: 7px; letter-spacing: 1px; }
@@ -490,8 +514,12 @@ function closeSuccess() {
 }
 
 /* ================== 信详情 ================== */
+let currentLetter = null;
+let replyTarget = null; // 正在回复的那条回复 { id, name }
+
 async function openLetter(id, from) {
   detailBackTarget = from;
+  replyTarget = null;
   show('view-letter');
   const box = $('letter-detail');
   box.innerHTML = '<div class="empty-tip">正在打开信封…</div>';
@@ -506,13 +534,17 @@ async function openLetter(id, from) {
 }
 
 function renderLetter(l) {
+  currentLetter = l;
   const box = $('letter-detail');
   const replies = (l.replies || []).map(r => `
     <div class="bubble">
       <div class="av">💬</div>
       <div class="box">
         <div class="nm">${escapeHtml(r.name)} · ${escapeHtml(r.createdAt)}</div>
+        ${r.replyToName ? `<div class="rp-to">回复 <b>@${escapeHtml(r.replyToName)}</b></div>` : ''}
+        ${r.quote ? `<div class="quote">${escapeHtml(r.quote)}</div>` : ''}
         <div class="tx">${escapeHtml(r.content)}</div>
+        <span class="rp" onclick="startReplyTo(${Number(l.id)}, ${Number(r.id)})">↩ 回复 Ta</span>
       </div>
     </div>`).join('');
 
@@ -530,27 +562,57 @@ function renderLetter(l) {
     </div>
 
     <div class="reply-form">
+      <div id="rep-target" class="rep-target" style="display:none">
+        <span>正在回复 <b id="rep-target-name"></b></span>
+        <button type="button" onclick="cancelReplyTo()">取消</button>
+      </div>
       <label>你的称呼</label>
       <input id="rep-name" type="text" maxlength="40" placeholder="署名，例如：陪你的人">
       <label style="margin-top:10px">回复内容</label>
-      <textarea id="rep-content" maxlength="4000" placeholder="写下你想回复的话……"></textarea>
-      <button class="btn-reply" onclick="sendReply(${l.id})">⭐ 送出回复</button>
+      <textarea id="rep-content" maxlength="4000" placeholder="${replyTarget ? '回复 @' + escapeHtml(replyTarget.name) + '……' : '写下你想回复的话……'}"></textarea>
+      <button class="btn-reply" onclick="sendReply(${Number(l.id)})">⭐ 送出回复</button>
     </div>`;
+
+  // 如果是从某条回复点进来的，恢复"正在回复"提示
+  if (replyTarget) {
+    $('rep-target-name').textContent = '@' + replyTarget.name;
+    $('rep-target').style.display = 'flex';
+  }
+}
+
+function startReplyTo(letterId, replyId) {
+  const target = currentLetter && currentLetter.id === letterId
+    ? (currentLetter.replies || []).find(r => r.id === replyId) : null;
+  if (!target) return;
+  replyTarget = { id: target.id, name: target.name };
+  $('rep-target-name').textContent = '@' + target.name;
+  $('rep-target').style.display = 'flex';
+  const input = $('rep-content');
+  input.placeholder = '回复 @' + target.name + '……';
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  input.focus();
+}
+
+function cancelReplyTo() {
+  replyTarget = null;
+  if ($('rep-target')) $('rep-target').style.display = 'none';
+  if ($('rep-content')) $('rep-content').placeholder = '写下你想回复的话……';
 }
 
 async function sendReply(id) {
   const name = $('rep-name').value.trim() || '匿名';
   const content = $('rep-content').value.trim();
   if (!content) return toast('请先写下回复内容');
+  const body = { name, content };
+  if (replyTarget) body.replyTo = replyTarget.id;
   try {
     await api('/api/letters/' + id + '/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, content })
+      body: JSON.stringify(body)
     });
-    toast('回复成功 💖');
-    renderLetter(letters.find(x => x.id === id) || { id, replies: [] });
-    // 刷新数据后再渲染
+    toast(replyTarget ? '已回复 @' + replyTarget.name + ' 💖' : '回复成功 💖');
+    replyTarget = null;
     const data = await api('/api/letters');
     const updated = (data.letters || []).find(x => x.id === id);
     if (updated) renderLetter(updated);
