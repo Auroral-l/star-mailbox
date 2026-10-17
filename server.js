@@ -15,6 +15,7 @@ const crypto = require('crypto');
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
+const MEDIA_DIR = path.join(ROOT, 'media');   // 本机模式下的照片存放处
 
 /* ---------------- 数据存储 ---------------- */
 // 两种保存模式：
@@ -127,25 +128,34 @@ async function ghSave(payload) {
   }
 }
 
-let saveScheduled = false;
+let saveTimer = null;
+let saveChain = Promise.resolve();
+
+function snapshotPayload() {
+  return JSON.stringify({ idSeq, profileSeq, letters, profiles }, null, 2);
+}
+
 function saveData() {
-  if (saveScheduled) return;
-  saveScheduled = true;
-  setImmediate(async () => {
-    saveScheduled = false;
-    const payload = JSON.stringify({ idSeq, profileSeq, letters, profiles }, null, 2);
-    try {
-      if (isCloud) {
-        await ghSave(payload);
-      } else {
-        await new Promise((resolve, reject) => {
-          fs.writeFile(DATA_FILE, payload, 'utf8', (err) => err ? reject(err) : resolve());
-        });
+  // 短时间内多次修改合并成一次保存；所有保存排队执行，避免同时写坏文件
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    const payload = snapshotPayload();
+    saveChain = saveChain.then(async () => {
+      try {
+        if (isCloud) {
+          await ghSave(payload);
+        } else {
+          // 先写临时文件再改名，避免程序恰好被杀时留下写了一半的文件
+          const tmp = DATA_FILE + '.tmp';
+          await fs.promises.writeFile(tmp, payload, 'utf8');
+          await fs.promises.rename(tmp, DATA_FILE);
+        }
+      } catch (e) {
+        console.error('保存数据失败：', e.message);
       }
-    } catch (e) {
-      console.error('保存数据失败：', e.message);
-    }
-  });
+    });
+  }, 50);
 }
 
 function nowStr() {
@@ -172,7 +182,7 @@ function readBody(req) {
     let body = '';
     req.on('data', (c) => {
       body += c;
-      if (body.length > 2 * 1024 * 1024) { req.destroy(); reject(new Error('内容过大')); }
+      if (body.length > 10 * 1024 * 1024) { req.destroy(); reject(new Error('内容过大')); }
     });
     req.on('end', () => {
       try { resolve(body ? JSON.parse(body) : {}); }
@@ -203,6 +213,90 @@ function cleanAvatar(s) {
   }
   if (s.length > 0 && s.length <= 16) return s;
   return '💗';
+}
+
+/* ---------------- 照片存储 ---------------- */
+// 照片单独存放（本机：media 文件夹；云端：私有仓库的 media/ 目录），
+// 数据文件里只保存照片文件名，避免 data.json 变得巨大。
+const MAX_IMAGES = 3;                       // 每封信/每条回复最多几张
+const MAX_IMAGE_BYTES = 700 * 1024;         // 单张照片压缩后最大约 700KB
+const IMG_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+const MEDIA_MIME = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+
+function imageError(msg) {
+  const err = new Error(msg);
+  err.status = 400;
+  return err;
+}
+
+function parseImageDataUrl(s) {
+  if (typeof s !== 'string') return null;
+  const m = s.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return null;
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length || buf.length > MAX_IMAGE_BYTES) return null;
+  return { mime: m[1], ext: IMG_EXT[m[1]], buf };
+}
+
+async function saveImage(img) {
+  const name = crypto.randomBytes(10).toString('hex') + '.' + img.ext;
+  if (isCloud) {
+    const put = await ghApi('/repos/' + GH_REPO + '/contents/media/' + name, 'PUT', {
+      message: '上传照片 ' + name,
+      content: img.buf.toString('base64')
+    });
+    if (put.status !== 200 && put.status !== 201) {
+      throw new Error('照片保存失败 HTTP ' + put.status);
+    }
+  } else {
+    await fs.promises.mkdir(MEDIA_DIR, { recursive: true });
+    await fs.promises.writeFile(path.join(MEDIA_DIR, name), img.buf);
+  }
+  return name;
+}
+
+async function saveImages(list) {
+  if (!Array.isArray(list) || !list.length) return [];
+  if (list.length > MAX_IMAGES) throw imageError('最多上传 ' + MAX_IMAGES + ' 张照片');
+  const parsed = list.map(parseImageDataUrl);
+  if (parsed.some((p) => !p)) throw imageError('照片格式不正确，或单张照片太大了');
+  return Promise.all(parsed.map(saveImage));
+}
+
+// 内存缓存，避免每次打开照片都去 GitHub 取
+const MEDIA_CACHE = new Map();
+let mediaCacheSize = 0;
+const MEDIA_CACHE_MAX = 80 * 1024 * 1024;   // 最多缓存 80MB
+
+async function loadMedia(name) {
+  if (MEDIA_CACHE.has(name)) {
+    const item = MEDIA_CACHE.get(name);
+    MEDIA_CACHE.delete(name);
+    MEDIA_CACHE.set(name, item);            // 刷新为最近使用
+    return item;
+  }
+  let buf;
+  if (isCloud) {
+    const res = await ghApi('/repos/' + GH_REPO + '/contents/media/' + name);
+    if (res.status !== 200 || !res.json || res.json.encoding !== 'base64') return null;
+    buf = Buffer.from(res.json.content, 'base64');
+  } else {
+    const file = path.join(MEDIA_DIR, name);
+    if (!fs.existsSync(file)) return null;
+    buf = await fs.promises.readFile(file);
+  }
+  const ext = name.split('.').pop();
+  const item = { buf, type: MEDIA_MIME[ext] || 'application/octet-stream' };
+  MEDIA_CACHE.set(name, item);
+  mediaCacheSize += buf.length;
+  while (mediaCacheSize > MEDIA_CACHE_MAX) {
+    const firstKey = MEDIA_CACHE.keys().next().value;
+    if (firstKey === undefined) break;
+    const first = MEDIA_CACHE.get(firstKey);
+    MEDIA_CACHE.delete(firstKey);
+    mediaCacheSize -= first.buf.length;
+  }
+  return item;
 }
 
 function getLanIP() {
@@ -322,7 +416,11 @@ const server = http.createServer(async (req, res) => {
       const sender = cleanText(body.sender, 40) || '匿名';
       const recipient = cleanText(body.recipient, 40) || '亲爱的你';
       if (!title) { sendJSON(res, 400, { error: '请填写标题' }); return; }
-      if (!content) { sendJSON(res, 400, { error: '请写下信的内容' }); return; }
+      if (!content && !(Array.isArray(body.images) && body.images.length)) {
+        sendJSON(res, 400, { error: '请写下信的内容或添加照片' });
+        return;
+      }
+      const images = await saveImages(body.images);
 
       const letter = {
         id: idSeq++,
@@ -330,6 +428,7 @@ const server = http.createServer(async (req, res) => {
         content,
         sender,
         recipient,
+        images,
         createdAt: nowStr(),
         replies: []
       };
@@ -348,7 +447,11 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const content = cleanText(body.content, 4000);
       let name = cleanText(body.name, 40) || '匿名';
-      if (!content) { sendJSON(res, 400, { error: '请写下回复内容' }); return; }
+      if (!content && !(Array.isArray(body.images) && body.images.length)) {
+        sendJSON(res, 400, { error: '请写下回复内容或添加照片' });
+        return;
+      }
+      const images = await saveImages(body.images);
 
       // 如果带了个人主页，就用主页上的名字
       const author = body.profileId != null
@@ -360,6 +463,7 @@ const server = http.createServer(async (req, res) => {
         id: (letter.replies.reduce((m, r) => Math.max(m, r.id || 0), 0)) + 1,
         name,
         content,
+        images,
         createdAt: nowStr()
       };
       if (author) reply.profileId = author.id;
@@ -379,6 +483,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    /* ---- 照片 ---- */
+    const mediaMatch = p.match(/^\/media\/([a-f0-9]{20}\.(?:jpg|png|webp))$/);
+    if (mediaMatch && req.method === 'GET') {
+      const item = await loadMedia(mediaMatch[1]);
+      if (!item) { res.writeHead(404); res.end(); return; }
+      res.writeHead(200, {
+        'Content-Type': item.type,
+        'Content-Length': item.buf.length,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(item.buf);
+      return;
+    }
+
     if (p.startsWith('/api/')) {
       sendJSON(res, 404, { error: '接口不存在' });
       return;
@@ -386,7 +505,7 @@ const server = http.createServer(async (req, res) => {
 
     serveStatic(res, p);
   } catch (e) {
-    sendJSON(res, 500, { error: e.message || '服务器出错' });
+    sendJSON(res, e.status || 500, { error: e.message || '服务器出错' });
   }
 });
 
@@ -447,6 +566,23 @@ function listen(port) {
 // 启动
 init();
 
-// 退出前保存一次
-process.on('SIGINT', () => { saveData(); process.exit(0); });
-process.on('SIGTERM', () => { saveData(); process.exit(0); });
+// 退出前保存一次（先等正在进行的保存完成，再写最新数据）
+function shutdown() {
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    const payload = snapshotPayload();
+    if (!isCloud) {
+      try { fs.writeFileSync(DATA_FILE, payload, 'utf8'); } catch (e) { /* 忽略 */ }
+      process.exit(0);
+    }
+    ghSave(payload).catch(() => {}).then(() => process.exit(0));
+    setTimeout(() => process.exit(0), 5000);
+  };
+  saveChain.then(finish, finish);
+  setTimeout(finish, 3000);
+}
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
