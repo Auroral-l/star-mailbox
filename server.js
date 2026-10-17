@@ -275,12 +275,23 @@ const server = http.createServer(async (req, res) => {
       const name = cleanText(body.name, 40) || '匿名';
       if (!content) { sendJSON(res, 400, { error: '请写下回复内容' }); return; }
 
-      letter.replies.push({
+      const reply = {
         id: (letter.replies.reduce((m, r) => Math.max(m, r.id || 0), 0)) + 1,
         name,
         content,
         createdAt: nowStr()
-      });
+      };
+      // 支持"回复某一条回复"
+      if (body.replyTo != null) {
+        const target = letter.replies.find((r) => r.id === Number(body.replyTo));
+        if (target) {
+          reply.replyTo = target.id;
+          reply.replyToName = target.name;
+          const flat = target.content.replace(/\s+/g, ' ');
+          reply.quote = flat.length > 60 ? flat.slice(0, 60) + '…' : flat;
+        }
+      }
+      letter.replies.push(reply);
       saveData();
       sendJSON(res, 200, { letter });
       return;
@@ -342,10 +353,12 @@ function listen(port) {
     console.log('   ⚠️ 请勿关闭这个黑色窗口，否则网站会关闭');
     console.log('==========================================');
     console.log('');
-    // 自动在浏览器中打开
-    try {
-      exec('start "" "http://localhost:' + usedPort + '"', { shell: 'cmd.exe' });
-    } catch (e) { /* 忽略 */ }
+    // 自动在浏览器中打开（测试时可设置 NO_OPEN=1 跳过）
+    if (!process.env.NO_OPEN) {
+      try {
+        exec('start "" "http://localhost:' + usedPort + '"', { shell: 'cmd.exe' });
+      } catch (e) { /* 忽略 */ }
+    }
   });
 }
 
