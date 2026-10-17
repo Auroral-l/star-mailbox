@@ -257,6 +257,49 @@
   }
   .upload-btn:active { transform: scale(.97); }
 
+  /* ---------- 信件/回复里的照片 ---------- */
+  .photo-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .photo-grid .ph {
+    position: relative; width: 84px; height: 84px; border-radius: 10px;
+    overflow: hidden; border: 1px solid rgba(255,255,255,.25);
+  }
+  .photo-grid .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-grid .ph .ph-x {
+    position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
+    border-radius: 50%; background: rgba(0,0,0,.65); color: #fff;
+    font-size: 13px; line-height: 20px; text-align: center; cursor: pointer;
+  }
+  .photo-add {
+    display: inline-block; padding: 9px 20px; border-radius: 999px;
+    background: rgba(255,255,255,.12); border: 1px dashed rgba(255,255,255,.4);
+    color: #fff; font-size: 13.5px; cursor: pointer; transition: .15s;
+    font-family: inherit;
+  }
+  .photo-add:active { transform: scale(.97); }
+  .photo-add.disabled { opacity: .45; pointer-events: none; }
+
+  .paper .photo-view { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .paper .photo-view img {
+    width: 100%; max-height: 420px; object-fit: cover;
+    border-radius: 12px; cursor: zoom-in; display: block;
+    box-shadow: 0 6px 18px rgba(58,42,90,.18);
+  }
+  .bubble .box .photo-view { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+  .bubble .box .photo-view img {
+    width: 84px; height: 84px; object-fit: cover; border-radius: 9px;
+    cursor: zoom-in; display: block;
+  }
+
+  #photo-overlay { background: rgba(10,6,20,.96); z-index: 70; }
+  #photo-overlay img {
+    max-width: 94vw; max-height: 86vh; border-radius: 12px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.7);
+  }
+  .photo-hint {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.5); font-size: 12.5px; pointer-events: none;
+  }
+
   .bubble .av.click { cursor: pointer; box-shadow: 0 0 0 2px rgba(255,209,102,.45); }
   .bubble .av img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
   .viewp { color: var(--gold); opacity: .8; font-size: 11.5px; text-decoration: none; margin-left: 3px; }
@@ -386,6 +429,12 @@
         <label>信的内容</label>
         <textarea id="in-content" maxlength="20000" placeholder="把想说的话都写下来吧……"></textarea>
       </div>
+      <div class="field">
+        <label>添加照片（可选，最多 3 张）</label>
+        <div class="photo-grid" id="write-photos"></div>
+        <input id="write-photo-input" type="file" accept="image/*" multiple style="display:none" onchange="addPhotos(this, 'write')">
+        <button type="button" class="photo-add" id="write-photo-add" onclick="document.getElementById('write-photo-input').click()">📷 选择照片</button>
+      </div>
       <button class="btn-send" id="btn-send" onclick="sendLetter()">💗 寄出这封信</button>
     </div>
 
@@ -446,6 +495,12 @@
   </div>
 </div>
 
+<!-- 点开大图 -->
+<div class="overlay" id="photo-overlay" onclick="closePhoto()">
+  <img id="photo-big" src="" alt="照片">
+  <div class="photo-hint">点击任意处关闭</div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -467,6 +522,99 @@ function toast(msg) {
 }
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ================== 照片处理 ================== */
+const MAX_PHOTOS = 3;
+let draftPhotos = [];   // 写信页已选照片（data URL）
+let replyPhotos = [];   // 回复框已选照片
+
+// 在手机上先压成 1200px 的 JPEG，既清楚又不太占空间
+function compressPhoto(file) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(file.type)) return reject(new Error('请选择照片'));
+    if (file.size > 25 * 1024 * 1024) return reject(new Error('这张照片太大了，换一张吧'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('照片读取失败'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('这张照片读不出来，换一张试试'));
+      img.onload = () => {
+        const maxSide = 1200;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        let quality = 0.82;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        while (dataUrl.length > 900000 && quality > 0.4) {
+          quality -= 0.12;
+          dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        if (dataUrl.length > 950000) return reject(new Error('照片压缩后还是太大，换一张吧'));
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addPhotos(input, where) {
+  const list = where === 'write' ? draftPhotos : replyPhotos;
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length) return;
+  const room = MAX_PHOTOS - list.length;
+  if (room <= 0) return toast('最多只能添加 ' + MAX_PHOTOS + ' 张照片');
+  const chosen = files.slice(0, room);
+  if (files.length > room) toast('最多 ' + MAX_PHOTOS + ' 张，多出的照片没有添加');
+  for (const file of chosen) {
+    try {
+      list.push(await compressPhoto(file));
+      renderPhotoGrid(where);
+    } catch (e) {
+      toast(e.message);
+    }
+  }
+}
+
+function removePhoto(where, index) {
+  const list = where === 'write' ? draftPhotos : replyPhotos;
+  list.splice(index, 1);
+  renderPhotoGrid(where);
+}
+
+function renderPhotoGrid(where) {
+  const list = where === 'write' ? draftPhotos : replyPhotos;
+  const grid = $(where === 'write' ? 'write-photos' : 'reply-photos');
+  if (grid) {
+    grid.innerHTML = list.map((url, i) =>
+      `<div class="ph"><img src="${url}" alt="照片"><span class="ph-x" onclick="removePhoto('${where}', ${i})">×</span></div>`
+    ).join('');
+  }
+  const btn = $(where === 'write' ? 'write-photo-add' : 'reply-photo-add');
+  if (btn) btn.classList.toggle('disabled', list.length >= MAX_PHOTOS);
+}
+
+function photoViewHtml(images) {
+  if (!Array.isArray(images) || !images.length) return '';
+  return '<div class="photo-view">' + images.map((name) =>
+    `<img src="/media/${encodeURIComponent(name)}" alt="照片" onclick="openPhoto(this.src)">`
+  ).join('') + '</div>';
+}
+
+function openPhoto(src) {
+  $('photo-big').src = src;
+  $('photo-overlay').classList.add('show');
+}
+function closePhoto() {
+  $('photo-overlay').classList.remove('show');
+  $('photo-big').src = '';
 }
 
 /* ================== 背景飘浮 ================== */
@@ -541,7 +689,7 @@ async function loadRecent() {
       <div class="recent-item" onclick="openLetter(${l.id}, 'write')">
         <div style="min-width:0">
           <div class="t">${escapeHtml(l.title)}</div>
-          <div class="m">${escapeHtml(l.recipient)} · ${l.createdAt} · 💬 ${l.replies.length}</div>
+          <div class="m">${escapeHtml(l.recipient)} · ${l.createdAt} · 💬 ${l.replies.length}${l.images && l.images.length ? ' · 📷 ' + l.images.length : ''}</div>
         </div>
         <div class="arrow">❯</div>
       </div>`).join('');
@@ -570,7 +718,7 @@ async function loadLetters() {
           <span class="tag">💗 给 ${escapeHtml(l.recipient)}</span>　·
           来自 ${escapeHtml(l.sender)}
         </div>
-        <div class="row3">💬 ${l.replies.length} 条回复</div>
+        <div class="row3">💬 ${l.replies.length} 条回复${l.images && l.images.length ? '　·　📷 ' + l.images.length + ' 张照片' : ''}</div>
       </div>`).join('');
   } catch (e) {
     box.innerHTML = '<div class="empty-tip">加载失败：' + escapeHtml(e.message) + '<br>请稍后再试</div>';
@@ -585,7 +733,7 @@ async function sendLetter() {
   const recipient = $('in-recipient').value.trim() || '亲爱的你';
 
   if (!title) return toast('请先给信起个标题');
-  if (!content) return toast('请写下信的内容哦');
+  if (!content && !draftPhotos.length) return toast('请写下信的内容，或添加照片');
 
   const btn = $('btn-send');
   btn.disabled = true;
@@ -594,10 +742,12 @@ async function sendLetter() {
     await api('/api/letters', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, content, sender, recipient })
+      body: JSON.stringify({ title, content, sender, recipient, images: draftPhotos.slice() })
     });
     $('in-title').value = '';
     $('in-content').value = '';
+    draftPhotos = [];
+    renderPhotoGrid('write');
     $('success-overlay').classList.add('show');
     loadRecent();
   } catch (e) {
@@ -619,6 +769,7 @@ let lastLetterId = null; // 用于"查看主页"后返回原信
 async function openLetter(id, from) {
   detailBackTarget = from;
   replyTarget = null;
+  replyPhotos = [];
   lastLetterId = id;
   show('view-letter');
   const box = $('letter-detail');
@@ -655,6 +806,7 @@ function renderLetter(l) {
         ${r.replyToName ? `<div class="rp-to">回复 <b>@${escapeHtml(r.replyToName)}</b></div>` : ''}
         ${r.quote ? `<div class="quote">${escapeHtml(r.quote)}</div>` : ''}
         <div class="tx">${escapeHtml(r.content)}</div>
+        ${photoViewHtml(r.images)}
         <span class="rp" onclick="startReplyTo(${Number(l.id)}, ${Number(r.id)})">↩ 回复 Ta</span>
       </div>
     </div>`;
@@ -664,6 +816,7 @@ function renderLetter(l) {
     <div class="paper">
       <div class="to">亲爱的 ${escapeHtml(l.recipient)}，</div>
       <div class="body">${escapeHtml(l.content)}</div>
+      ${photoViewHtml(l.images)}
       <div class="sig">—— ${escapeHtml(l.sender)}</div>
       <div class="time">${escapeHtml(l.createdAt)}</div>
     </div>
@@ -690,6 +843,12 @@ function renderLetter(l) {
       `}
       <label style="margin-top:10px">回复内容</label>
       <textarea id="rep-content" maxlength="4000" placeholder="${replyTarget ? '回复 @' + escapeHtml(replyTarget.name) + '……' : '写下你想回复的话……'}"></textarea>
+      <div class="field" style="margin-top:12px">
+        <label>添加照片（可选，最多 3 张）</label>
+        <div class="photo-grid" id="reply-photos"></div>
+        <input id="reply-photo-input" type="file" accept="image/*" multiple style="display:none" onchange="addPhotos(this, 'reply')">
+        <button type="button" class="photo-add" id="reply-photo-add" onclick="document.getElementById('reply-photo-input').click()">📷 选择照片</button>
+      </div>
       <button class="btn-reply" onclick="sendReply(${Number(l.id)})">⭐ 送出回复</button>
     </div>`;
 
@@ -698,6 +857,7 @@ function renderLetter(l) {
     $('rep-target-name').textContent = '@' + replyTarget.name;
     $('rep-target').style.display = 'flex';
   }
+  renderPhotoGrid('reply');
 }
 
 function startReplyTo(letterId, replyId) {
@@ -724,8 +884,8 @@ async function sendReply(id) {
   const name = myProfile ? myProfile.name
     : ((nameInput ? nameInput.value.trim() : '') || '匿名');
   const content = $('rep-content').value.trim();
-  if (!content) return toast('请先写下回复内容');
-  const body = { name, content };
+  if (!content && !replyPhotos.length) return toast('请先写下回复内容或添加照片');
+  const body = { name, content, images: replyPhotos.slice() };
   if (myProfile) body.profileId = myProfile.id;
   if (replyTarget) body.replyTo = replyTarget.id;
   try {
@@ -736,6 +896,7 @@ async function sendReply(id) {
     });
     toast(replyTarget ? '已回复 @' + replyTarget.name + ' 💖' : '回复成功 💖');
     replyTarget = null;
+    replyPhotos = [];
     const data = await api('/api/letters');
     rememberProfiles(data);
     const updated = (data.letters || []).find(x => x.id === id);
