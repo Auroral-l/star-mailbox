@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
+const crypto = require('crypto');
 
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -27,6 +28,8 @@ const DATA_FILE = process.env.DATA_FILE || path.join(ROOT, 'data.json');
 
 let letters = [];       // 所有信
 let idSeq = 1;          // 信的自增编号
+let profiles = [];      // 个人主页
+let profileSeq = 1;     // 主页自增编号
 
 function applyData(data) {
   letters = Array.isArray(data.letters) ? data.letters : [];
@@ -36,6 +39,13 @@ function applyData(data) {
     if (!Array.isArray(l.replies)) l.replies = [];
   }
   idSeq = (typeof data.idSeq === 'number' && data.idSeq > max) ? data.idSeq : max + 1;
+
+  profiles = Array.isArray(data.profiles) ? data.profiles : [];
+  let maxP = 0;
+  for (const p of profiles) {
+    if (typeof p.id === 'number' && p.id > maxP) maxP = p.id;
+  }
+  profileSeq = (typeof data.profileSeq === 'number' && data.profileSeq > maxP) ? data.profileSeq : maxP + 1;
 }
 
 function loadLocal() {
@@ -123,7 +133,7 @@ function saveData() {
   saveScheduled = true;
   setImmediate(async () => {
     saveScheduled = false;
-    const payload = JSON.stringify({ idSeq, letters }, null, 2);
+    const payload = JSON.stringify({ idSeq, profileSeq, letters, profiles }, null, 2);
     try {
       if (isCloud) {
         await ghSave(payload);
@@ -177,6 +187,22 @@ function cleanText(s, max) {
   s = s.replace(/\r\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
   if (s.length > max) s = s.slice(0, max);
   return s;
+}
+
+/* ---------------- 个人主页 ---------------- */
+function publicProfile(p) {
+  return { id: p.id, name: p.name, avatar: p.avatar, bio: p.bio, createdAt: p.createdAt };
+}
+
+// 头像可以是表情（几个字符），也可以是上传的照片（压缩后的 data URL）
+function cleanAvatar(s) {
+  if (typeof s !== 'string') return '💗';
+  s = s.trim();
+  if (/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(s)) {
+    return s.length <= 300000 ? s : '💗';
+  }
+  if (s.length > 0 && s.length <= 16) return s;
+  return '💗';
 }
 
 function getLanIP() {
@@ -234,9 +260,58 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (p === '/api/letters' && req.method === 'GET') {
-      // 最新的信排在最前面
+      // 最新的信排在最前面；顺便带上所有主页信息，回复里只存主页编号
       const sorted = letters.slice().sort((a, b) => (b.id || 0) - (a.id || 0));
-      sendJSON(res, 200, { letters: sorted });
+      sendJSON(res, 200, { letters: sorted, profiles: profiles.map(publicProfile) });
+      return;
+    }
+
+    /* ---- 个人主页 ---- */
+    if (p === '/api/profiles' && req.method === 'POST') {
+      const body = await readBody(req);
+      const name = cleanText(body.name, 24);
+      if (!name) { sendJSON(res, 400, { error: '请填写名字' }); return; }
+      const profile = {
+        id: profileSeq++,
+        name,
+        avatar: cleanAvatar(body.avatar),
+        bio: cleanText(body.bio, 60),
+        token: crypto.randomBytes(24).toString('hex'),
+        createdAt: nowStr(),
+        updatedAt: nowStr()
+      };
+      profiles.push(profile);
+      saveData();
+      sendJSON(res, 200, { profile: publicProfile(profile), token: profile.token });
+      return;
+    }
+
+    const profileMatch = p.match(/^\/api\/profiles\/(\d+)$/);
+    if (profileMatch && req.method === 'GET') {
+      const id = parseInt(profileMatch[1], 10);
+      const profile = profiles.find((x) => x.id === id);
+      if (!profile) { sendJSON(res, 404, { error: '这个主页不存在' }); return; }
+      sendJSON(res, 200, { profile: publicProfile(profile) });
+      return;
+    }
+
+    if (profileMatch && req.method === 'PUT') {
+      const id = parseInt(profileMatch[1], 10);
+      const profile = profiles.find((x) => x.id === id);
+      if (!profile) { sendJSON(res, 404, { error: '这个主页不存在' }); return; }
+      const body = await readBody(req);
+      if (!body.token || body.token !== profile.token) {
+        sendJSON(res, 403, { error: '没有权限修改这个主页' });
+        return;
+      }
+      const name = cleanText(body.name, 24);
+      if (!name) { sendJSON(res, 400, { error: '请填写名字' }); return; }
+      profile.name = name;
+      profile.avatar = cleanAvatar(body.avatar);
+      profile.bio = cleanText(body.bio, 60);
+      profile.updatedAt = nowStr();
+      saveData();
+      sendJSON(res, 200, { profile: publicProfile(profile) });
       return;
     }
 
@@ -272,8 +347,14 @@ const server = http.createServer(async (req, res) => {
 
       const body = await readBody(req);
       const content = cleanText(body.content, 4000);
-      const name = cleanText(body.name, 40) || '匿名';
+      let name = cleanText(body.name, 40) || '匿名';
       if (!content) { sendJSON(res, 400, { error: '请写下回复内容' }); return; }
+
+      // 如果带了个人主页，就用主页上的名字
+      const author = body.profileId != null
+        ? profiles.find((x) => x.id === Number(body.profileId))
+        : null;
+      if (author) name = author.name;
 
       const reply = {
         id: (letter.replies.reduce((m, r) => Math.max(m, r.id || 0), 0)) + 1,
@@ -281,6 +362,7 @@ const server = http.createServer(async (req, res) => {
         content,
         createdAt: nowStr()
       };
+      if (author) reply.profileId = author.id;
       // 支持"回复某一条回复"
       if (body.replyTo != null) {
         const target = letter.replies.find((r) => r.id === Number(body.replyTo));
